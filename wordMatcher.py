@@ -1,4 +1,3 @@
-from fuzzywuzzy import fuzz
 
 # Bunch of sentances the code will analyze
 sentences = ["It was a beautiful day.", "ItwasItwas", "it was", "itwas", "causedby", "causedBy",
