@@ -1,6 +1,10 @@
+import enchant  # PyEnchant library for spell-checking
+
+# Create a dictionary for spell-checking
+d = pyenchant.Dict("en_US")
 
 # Bunch of sentances the code will analyze
-sentences = ["It was a beautiful day.", "ItwasItwas", "it was", "itwas", "causedby", "causedBy",
+sentences = ["It was a beautiful day.", "ItwasItwas", "it was", "itwas", "causedby", "causedBy", "causdBy",
              "The problem was caused by a server error.", "This is a sample sentence."]
 
 # Arrays for specific phrases
@@ -11,13 +15,25 @@ trueForCausedBy = []
 falseForCausedBy = []
 
 # A function to check if a sentence contains a specific phrase
+
+
+# A function to check if a sentence contains a specific phrase, with spell-checking
 def contains_phrase(sentence, phrase):
     # Create variations of the phrase with and without spaces
     variations = [phrase, phrase.replace(" ", ""), phrase.replace(" ", "_")]
+
     # Check for an exact match or variations with case-insensitivity
     for variation in variations:
         if variation.lower() in sentence.lower():
             return True
+
+        # If the variation is not an exact match, try spell-checking it
+        suggestions = d.suggest(variation)
+        for suggestion in suggestions:
+            if suggestion.lower() in sentence.lower():
+                return True
+
+    # If no match is found, return False
     return False
 
 
