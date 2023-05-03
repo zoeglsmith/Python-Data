@@ -4,7 +4,8 @@ import pandas as pd
 d = enchant.Dict("en_US")
 
 
-df = pd.read_excel('dataset.xlsx')
+df = pd.read_excel('dataset.xlsx', usecols='C')
+print(df)
 
 # print(df)
 # # Arrays for specific phrases
