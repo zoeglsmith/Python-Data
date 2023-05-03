@@ -1,23 +1,23 @@
 import enchant  # PyEnchant library for spell-checking
-
+import pandas as pd
 # Create a dictionary for spell-checking
 d = enchant.Dict("en_US")
 
-# Bunch of sentances the code will analyze
-sentences = ["It was a beautiful day.", "ItwasItwas", "it was", "itwas", "causedby", "causedBy", "causdBy",
-             "The problem was caused by a server error.", "This is a sample sentence."]
 
-# Arrays for specific phrases
+df = pd.read_excel('dataset.xlsx')
+
+# print(df)
+# # Arrays for specific phrases
 trueForItWas = []
 falseForItWas = []
 
-trueForCausedBy = []
-falseForCausedBy = []
+# trueForCausedBy = []
+# falseForCausedBy = []
 
-# A function to check if a sentence contains a specific phrase
+# # A function to check if a sentence contains a specific phrase
 
 
-# A function to check if a sentence contains a specific phrase, with spell-checking
+# # A function to check if a sentence contains a specific phrase, with spell-checking
 def contains_phrase(sentence, phrase):
     # Create variations of the phrase with and without spaces
     variations = [phrase, phrase.replace(" ", ""), phrase.replace(" ", "_")]
@@ -38,23 +38,13 @@ def contains_phrase(sentence, phrase):
 
 
 # Check each sentence for the phrases "it was" and "caused by"
-for sentence in sentences:
+for sentence in df:
     if contains_phrase(sentence, "it was"):
         trueForItWas.append(sentence)
     else:
         falseForItWas.append(sentence)
 
-for sentence in sentences:
-    if contains_phrase(sentence, "caused by"):
-        trueForCausedBy.append(sentence)
-    else:
-        falseForCausedBy.append(sentence)
-
 # Print the results
 print("IT_WAS ARRAYS:")
 print("True statements:", trueForItWas)
 print("False statements:", falseForItWas)
-
-print("CAUSED_BY ARRAYS:")
-print("True statements:", trueForCausedBy)
-print("False statements:", falseForCausedBy)
