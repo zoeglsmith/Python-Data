@@ -1,7 +1,5 @@
-import enchant  # PyEnchant library for spell-checking
+# import enchant  # PyEnchant library for spell-checking
 import pandas as pd
-# Create a dictionary for spell-checking
-d = enchant.Dict("en_US")
 
 
 df = pd.read_excel('dataset.xlsx', usecols='C')
@@ -27,15 +25,6 @@ def contains_phrase(sentence, phrase):
     for variation in variations:
         if variation.lower() in sentence.lower():
             return True
-
-        # If the variation is not an exact match, try spell-checking it
-        suggestions = d.suggest(variation)
-        for suggestion in suggestions:
-            if suggestion.lower() in sentence.lower():
-                return True
-
-    # If no match is found, return False
-    return False
 
 
 # Check each sentence for the phrases "it was" and "caused by"

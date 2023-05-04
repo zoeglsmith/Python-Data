@@ -1,7 +1,7 @@
-import enchant  # PyEnchant library for spell-checking
+# import enchant  # PyEnchant library for spell-checking
 
-# Create a dictionary for spell-checking
-d = enchant.Dict("en_US")
+# # Create a dictionary for spell-checking
+# d = enchant.Dict("en_US")
 
 # Bunch of sentances the code will analyze
 sentences = ["It was a beautiful day.", "ItwasItwas", "it was", "itwas", "causedby", "causedBy", "causdBy",
@@ -27,13 +27,13 @@ def contains_phrase(sentence, phrase):
         if variation.lower() in sentence.lower():
             return True
 
-        # If the variation is not an exact match, try spell-checking it
-        suggestions = d.suggest(variation)
-        for suggestion in suggestions:
-            if suggestion.lower() in sentence.lower():
-                return True
+    #     # If the variation is not an exact match, try spell-checking it
+    #     suggestions = d.suggest(variation)
+    #     for suggestion in suggestions:
+    #         if suggestion.lower() in sentence.lower():
+    #             return True
 
-    # If no match is found, return False
+    # # If no match is found, return False
     return False
 
 
