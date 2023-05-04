@@ -21,6 +21,8 @@ falseForIssue = []
 itWasSentences = []
 causedBySentences = []
 issueSentences = []
+bugSentances = []
+falseForBug = []
 
 # A function to check if a sentence contains a specific phrase, with spell-checking
 
@@ -58,29 +60,34 @@ for row in sheet.iter_rows(min_row=2, min_col=1, max_col=3):
     else:
         falseForIssue.append(sentence)
 
-# Connect to the PostgreSQL database
-conn = psycopg2.connect(
-    host="localhost",
-    database="issuesdb",
-    user="admin",
-    password="password"
-)
+    if contains_phrase(sentence, "bug"):
+        bugSentances.append((issue_num, sentence))
+    else:
+        falseForBug.append(sentence)
+
+# # Connect to the PostgreSQL database
+# conn = psycopg2.connect(
+#     host="localhost",
+#     database="issuesdb",
+#     user="admin",
+#     password="password"
+# )
 
 
-# Create a cursor object
-cursor = conn.cursor()
+# # Create a cursor object
+# cursor = conn.cursor()
 
-# Insert the sentences and their corresponding issue numbers into the "sentences" table
-for issue_num, sentence in itWasSentences + causedBySentences + issueSentences:
-    cursor.execute(
-        "INSERT INTO sentences (issue_num, sentence) VALUES (%s, %s)", (issue_num, sentence))
+# # Insert the sentences and their corresponding issue numbers into the "sentences" table
+# for issue_num, sentence in itWasSentences + causedBySentences + issueSentences:
+#     cursor.execute(
+#         "INSERT INTO sentences (issue_num, sentence) VALUES (%s, %s)", (issue_num, sentence))
 
-# Commit the changes to the database
-conn.commit()
+# # Commit the changes to the database
+# conn.commit()
 
-# Close the cursor and database connections
-cursor.close()
-conn.close()
+# # Close the cursor and database connections
+# cursor.close()
+# conn.close()
 
 # Print the sentences and their corresponding issue numbers
 print("\nIT_WAS SENTENCES:")
@@ -93,4 +100,8 @@ for issue_num, sentence in causedBySentences:
 
 print("\nISSUE SENTENCES:")
 for issue_num, sentence in issueSentences:
+    print(f"Issue {issue_num}: {sentence}\n")
+
+print("\nBUG SENTENCES:")
+for issue_num, sentence in bugSentances:
     print(f"Issue {issue_num}: {sentence}\n")
