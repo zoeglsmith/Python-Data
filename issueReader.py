@@ -15,6 +15,9 @@ falseForItWas = []
 trueForCausedBy = []
 falseForCausedBy = []
 
+trueForIssue = []
+falseForIssue = []
+
 # A function to check if a sentence contains a specific phrase, with spell-checking
 
 
@@ -43,6 +46,14 @@ for cell in sheet['C']:
     else:
         falseForCausedBy.append(sentence)
 
+
+for cell in sheet['C']:
+    sentence = str(cell.value)
+    if contains_phrase(sentence, "issue"):
+        falseForIssue.append(sentence)
+    else:
+        falseForIssue.append(sentence)
+
 # Print the results
 print("IT_WAS ARRAYS:")
 print("True statements:", trueForItWas)
@@ -52,3 +63,7 @@ print("False statements:", falseForItWas)
 print("CAUSED_BY ARRAYS:")
 print("TRUE statements:", trueForCausedBy)
 print("FALSE statements:", falseForCausedBy)
+
+print("ISSUE ARRAYS:")
+print("TRUE statements:", falseForIssue)
+print("FALSE statements:", falseForIssue)
