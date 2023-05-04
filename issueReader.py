@@ -1,5 +1,4 @@
-# import enchant  # PyEnchant library for spell-checking
-import pandas as pd
+import psycopg2
 import openpyxl
 
 # Load the Excel file into a workbook object
@@ -59,29 +58,39 @@ for row in sheet.iter_rows(min_row=2, min_col=1, max_col=3):
     else:
         falseForIssue.append(sentence)
 
+# Connect to the PostgreSQL database
+conn = psycopg2.connect(
+    host="localhost",
+    database="issuesdb",
+    user="admin",
+    password="password"
+)
 
-# # Print the results
-# print("\nIT_WAS ARRAYS:")
-# print("\nTRUE IT WAS statements:\n", trueForItWas)
-# print("\nFALSE IT WAS statements:\n", falseForItWas)
 
-# print("\nCAUSED_BY ARRAYS:")
-# print("\nTRUE CAUSED BY statements:\n", trueForCausedBy)
-# print("\nFALSE CAUSED BY statements:\n", falseForCausedBy)
+# Create a cursor object
+cursor = conn.cursor()
 
-# print("\nISSUE ARRAYS:")
-# print("\nTRUE ISSUE statements:\n", trueForIssue)
-# print("\nFALSE ISSUE statements:\n", falseForIssue)
+# Insert the sentences and their corresponding issue numbers into the "sentences" table
+for issue_num, sentence in itWasSentences + causedBySentences + issueSentences:
+    cursor.execute(
+        "INSERT INTO sentences (issue_num, sentence) VALUES (%s, %s)", (issue_num, sentence))
+
+# Commit the changes to the database
+conn.commit()
+
+# Close the cursor and database connections
+cursor.close()
+conn.close()
 
 # Print the sentences and their corresponding issue numbers
 print("\nIT_WAS SENTENCES:")
 for issue_num, sentence in itWasSentences:
-    print(f"Issue {issue_num}: {sentence}")
+    print(f"Issue {issue_num}: {sentence}\ne")
 
 print("\nCAUSED_BY SENTENCES:")
 for issue_num, sentence in causedBySentences:
-    print(f"Issue {issue_num}: {sentence}")
+    print(f"Issue {issue_num}: {sentence}\n")
 
 print("\nISSUE SENTENCES:")
 for issue_num, sentence in issueSentences:
-    print(f"Issue {issue_num}: {sentence}")
+    print(f"Issue {issue_num}: {sentence}\n")
