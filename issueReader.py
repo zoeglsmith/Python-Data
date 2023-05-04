@@ -50,20 +50,18 @@ for cell in sheet['C']:
 for cell in sheet['C']:
     sentence = str(cell.value)
     if contains_phrase(sentence, "issue"):
-        falseForIssue.append(sentence)
+        trueForIssue.append(sentence)
     else:
         falseForIssue.append(sentence)
-
 # Print the results
-print("IT_WAS ARRAYS:")
-print("True statements:", trueForItWas)
-print("False statements:", falseForItWas)
+print("\nIT_WAS ARRAYS:")
+print("\nTRUE IT WAS statements:\n", trueForItWas)
+print("\nFALSE IT WAS statements:\n", falseForItWas)
 
+print("\nCAUSED_BY ARRAYS:")
+print("\nTRUE CAUSED BY statements:\n", trueForCausedBy)
+print("\nFALSE CAUSED BY statements:\n", falseForCausedBy)
 
-print("CAUSED_BY ARRAYS:")
-print("TRUE statements:", trueForCausedBy)
-print("FALSE statements:", falseForCausedBy)
-
-print("ISSUE ARRAYS:")
-print("TRUE statements:", falseForIssue)
-print("FALSE statements:", falseForIssue)
+print("\nISSUE ARRAYS:")
+print("\nTRUE ISSUE statements:\n", trueForIssue)
+print("\nFALSE ISSUE statements:\n", falseForIssue)
