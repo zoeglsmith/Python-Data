@@ -43,19 +43,19 @@ for row in sheet.iter_rows(min_row=2, min_col=1, max_col=3):
     sentence = str(row[2].value)
 
     if contains_phrase(sentence, "it was"):
-        trueForItWas.append(sentence)
+        # trueForItWas.append(sentence)
         itWasSentences.append((issue_num, sentence))
     else:
         falseForItWas.append(sentence)
 
     if contains_phrase(sentence, "cause"):
-        trueForCausedBy.append(sentence)
+        # trueForCausedBy.append(sentence)
         causedBySentences.append((issue_num, sentence))
     else:
         falseForCausedBy.append(sentence)
 
     if contains_phrase(sentence, "issue"):
-        trueForIssue.append(sentence)
+        # trueForIssue.append(sentence)
         issueSentences.append((issue_num, sentence))
     else:
         falseForIssue.append(sentence)
