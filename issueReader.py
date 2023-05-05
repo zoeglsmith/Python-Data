@@ -8,7 +8,7 @@ workbook = openpyxl.load_workbook('dataset.xlsx')
 sheet = workbook.active
 
 # Arrays for specific phrases
-phrases = ["big", "problems", "cause", "it was"]
+phrases = ["bug", "problems", "issue" "cause", "it was", "error"]
 
 trueSentences = []
 falseSentences = []
@@ -39,6 +39,7 @@ for row in sheet.iter_rows(min_row=2, min_col=1, max_col=3):
             break
     if not found:
         falseSentences.append((issue_num, sentence))
+
 
 # Connect to the PostgreSQL database
 conn = psycopg2.connect(
@@ -73,6 +74,51 @@ conn = psycopg2.connect(
 
 # Create a cursor object
 cursor = conn.cursor()
+
+# Create tables
+cursor.execute("""
+    CREATE TABLE bug (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE problems (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE issue (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE cause (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE it_was (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE error (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+
 
 # Insert the false sentences and their corresponding issue numbers into the "sentences" table
 for issue_num, sentence in falseSentences:
