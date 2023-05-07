@@ -44,7 +44,7 @@ for row in sheet.iter_rows(min_row=2, min_col=1, max_col=3):
 # Connect to the PostgreSQL database
 conn = psycopg2.connect(
     host="localhost",
-    database="trueIssuesdb",
+    database="",
     user="zoe",
     password="password"
 )
@@ -115,7 +115,7 @@ conn.close()
 # Connect to the PostgreSQL database
 conn = psycopg2.connect(
     host="localhost",
-    database="falseIssues",
+    database="",
     user="zoe",
     password="password"
 )
