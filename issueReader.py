@@ -52,10 +52,58 @@ conn = psycopg2.connect(
 # Create a cursor object
 cursor = conn.cursor()
 
-# Insert the true sentences and their corresponding issue numbers into the "sentences" table
+# Create tables
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS bug (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS problems (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS issue (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS cause (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS it_was (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS error (
+        id SERIAL PRIMARY KEY,
+        issue_num TEXT,
+        sentence TEXT
+    )
+""")
+
+
+# Insert the true sentences and their corresponding issue numbers into the respective tables
 for issue_num, sentence in trueSentences:
-    cursor.execute(
-        "INSERT INTO sentences (issue_num, sentence) VALUES (%s, %s)", (issue_num, sentence))
+    for phrase in phrases:
+        if contains_phrase(sentence, phrase):
+            table_name = phrase.replace(" ", "_")
+            cursor.execute(
+                f"INSERT INTO {table_name} (issue_num, sentence) VALUES (%s, %s)", (issue_num, sentence))
 
 # Commit the changes to the database
 conn.commit()
@@ -74,50 +122,6 @@ conn = psycopg2.connect(
 
 # Create a cursor object
 cursor = conn.cursor()
-
-# Create tables
-cursor.execute("""
-    CREATE TABLE bug (
-        id SERIAL PRIMARY KEY,
-        issue_num TEXT,
-        sentence TEXT
-    )
-""")
-cursor.execute("""
-    CREATE TABLE problems (
-        id SERIAL PRIMARY KEY,
-        issue_num TEXT,
-        sentence TEXT
-    )
-""")
-cursor.execute("""
-    CREATE TABLE issue (
-        id SERIAL PRIMARY KEY,
-        issue_num TEXT,
-        sentence TEXT
-    )
-""")
-cursor.execute("""
-    CREATE TABLE cause (
-        id SERIAL PRIMARY KEY,
-        issue_num TEXT,
-        sentence TEXT
-    )
-""")
-cursor.execute("""
-    CREATE TABLE it_was (
-        id SERIAL PRIMARY KEY,
-        issue_num TEXT,
-        sentence TEXT
-    )
-""")
-cursor.execute("""
-    CREATE TABLE error (
-        id SERIAL PRIMARY KEY,
-        issue_num TEXT,
-        sentence TEXT
-    )
-""")
 
 
 # Insert the false sentences and their corresponding issue numbers into the "sentences" table
