@@ -19,15 +19,18 @@ PHRASES = {
 # Function to check if a sentence contains phrase, with spell-checking
 
 
-def contains_phrase(sentence, phrase):
-    # Create variations of the phrase with and without spaces
-    variations = [phrase, phrase.replace(" ", ""), phrase.replace(" ", "_")]
+def contains_phrase(sentence, phrases):
+    # Iterate over each phrase and its variations
+    for phrase in phrases:
+        variations = [phrase, phrase.replace(
+            " ", ""), phrase.replace(" ", "_")]
 
-    # Check for exact match or variations with case-insensitivity
-    for variation in variations:
-        if variation.lower() in sentence.lower():
-            return True
+        # Check for exact match or variations with case-insensitivity
+        for variation in variations:
+            if variation.lower() in sentence.lower():
+                return True
     return False
+
 
 # Function to create a table in the database
 
@@ -69,14 +72,11 @@ falseIssues = []
 for row in sheet.iter_rows(min_row=2, min_col=1, max_col=3):
     issue_num = str(row[0].value)
     sentence = str(row[2].value)
-
-    found = False
+found_phrases = contains_phrase(sentence, PHRASES.keys())
+if found_phrases:
     for phrase in PHRASES:
-        if contains_phrase(sentence, phrase):
-            trueIssues.append((issue_num, sentence, phrase))
-            found = True
-            break
-    if not found:
+        trueIssues.append((issue_num, sentence, phrase))
+    else:
         falseIssues.append((issue_num, sentence))
 
 # Connect to the database
