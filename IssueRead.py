@@ -1,19 +1,20 @@
-
+import ssl
 import nltk
+from nltk.stem import PorterStemmer
+from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
-from nltk.stem import PorterStemmer, WordNetLemmatizer
+import os
+import re
 import psycopg2
 import openpyxl
-import re
 
-# Set the data path for NLTK to include the absolute path to the "wordnet" folder
-nltk.data.path.append('wordnet')
+# Set the SSL certificate file path
+ssl._create_default_https_context = ssl._create_unverified_context
 
-# Download the WordNet corpus if not already downloaded
+# Set the NLTK data directory within the 'env' folder
+nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
+
 nltk.download('wordnet')
-
-
-# Rest of the code...
 
 
 # Constants for database connection
