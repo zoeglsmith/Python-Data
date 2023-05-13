@@ -16,25 +16,23 @@ nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
 
 nltk.download('wordnet')
 
-
 # Constants for database connection
 DATABASE_NAME = "issues"
 DATABASE_USER = "zoe"
 DATABASE_PASSWORD = "password"
 
 # Constants for specific phrases
-PHRASES = ["bugs", "problem", "issues", "cause", "it was", "errors"]
+phrases = ["Bug", "Error", "Problem", "Feature", "Enhancement", "Issue", "Fix",
+           "Crash", "Support", "Request", "Improve", "Unable", "Broken", "Documentation", "Performance"]
 
-# Function to check if a sentence contains a phrase
+# Function to check if a sentence contains any of the phrases
 
 
 def contains_phrase(sentence, phrases):
     for phrase in phrases:
         pattern = r"\b" + re.escape(phrase) + r"\b"
         if re.search(pattern, sentence, re.IGNORECASE):
-            print("Found phrase:", phrase)
             return True
-    print("No matching phrase found.")
     return False
 
 # Function to connect to the database using a context manager
@@ -78,7 +76,7 @@ for row in sheet.iter_rows(min_row=2, min_col=1, max_col=3, values_only=True):
     ])
 
     # Check if the normalized sentence contains any of the phrases
-    if contains_phrase(normalized_sentence, PHRASES):
+    if contains_phrase(normalized_sentence, phrases):
         # Store the sentence in the "sentences" list
         sentences.append((sentence,))
         # Store the issue number in the "issueCodes" list
@@ -88,15 +86,17 @@ for row in sheet.iter_rows(min_row=2, min_col=1, max_col=3, values_only=True):
 with connect_to_database(DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD) as conn:
     # Create a cursor object
     with conn.cursor() as cursor:
-        # Insert the sentences into the "sentences" table
-        print("Inserting sentences...")
-        cursor.executemany(
-            "INSERT INTO sentences (sentence) VALUES (%s)", sentences)
+        # Check if there are any valid sentences and issue codes to insert
+        if sentences and issueCodes:
+            # Insert the sentences into the "sentences" table
+            print("Inserting sentences...")
+            cursor.executemany(
+                "INSERT INTO sentences (sentence) VALUES (%s)", sentences)
 
-        # Insert the issue codes into the "issueCodes" table
-        print("Inserting issue codes...")
-        cursor.executemany(
-            "INSERT INTO issueCodes (code) VALUES (%s)", issueCodes)
+            # Insert the issue codes into the "issueCodes" table
+            print("Inserting issue codes...")
+            cursor.executemany(
+                "INSERT INTO issueCodes (code) VALUES (%s)", issueCodes)
 
     # Commit the changes to the database
     conn.commit()
