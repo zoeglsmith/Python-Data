@@ -9,6 +9,7 @@ import openpyxl
 import difflib
 from psycopg2 import pool
 import xml.etree.ElementTree as ET
+from bs4 import BeautifulSoup
 
 # Set the SSL certificate file path
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -110,15 +111,17 @@ for issue in root.findall('.//item'):
     print("Extracted issue number:", issue_num)
 
     # Extract text content from description element, ignoring HTML and other tags
-    description_text = ''.join(issue.find('description').itertext())
+    soup = BeautifulSoup(description, 'html.parser')
+    description_text = soup.get_text()
 
-    # Extract words from the description text using regex pattern
-    words = re.findall(r'\b\w+\b', description_text)
+    # Extract sentences from the description text using regex pattern
+    sentences_list = re.findall(
+        r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', description_text)
 
-    # Check if any word contains the desired phrases
-    if any(contains_phrase(word, preprocessed_phrases) for word in words):
-        # Store the description in the "sentences" set
-        sentences.add(description_text)
+    # Check if any sentence contains the desired phrases
+    if any(contains_phrase(sentence, preprocessed_phrases) for sentence in sentences_list):
+        # Store the sentences in the "sentences" set
+        sentences.update(sentences_list)
         # Store the issue number in the "issueCodes" set
         issueCodes.add(issue_num)
 
