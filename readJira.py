@@ -1,29 +1,17 @@
-import ssl
-import nltk
-from nltk.stem import PorterStemmer
-from nltk.stem import WordNetLemmatizer
 import os
 import re
-import psycopg2
+import requests
+import ssl
 import openpyxl
-import difflib
-from psycopg2 import pool
-import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
+from nltk.stem import PorterStemmer
+from nltk.stem import WordNetLemmatizer
+import difflib
+import psycopg2
+from psycopg2 import pool
 
 # Set the SSL certificate file path
 ssl._create_default_https_context = ssl._create_unverified_context
-
-# Set the NLTK data directory within the 'env' folder
-nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
-
-# Disable SSL verification for JIRA connection
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
-
-# Constants for XML file path
-XML_FILE_PATH = 'SearchRequest.xml'
 
 # Constants for database connection
 DATABASE_NAME = "issues"
@@ -40,8 +28,6 @@ phrases = {
 }
 
 # Function to check if a sentence contains any of the phrases
-
-
 def contains_phrase(sentence, phrases):
     for phrase in phrases:
         pattern = r"\b" + re.escape(phrase) + r"\b"
@@ -50,8 +36,6 @@ def contains_phrase(sentence, phrases):
     return False
 
 # Function to find matching phrases with variations (typos, plural forms, different endings)
-
-
 def find_matching_phrases(phrase, phrases, lemmatizer):
     matches = []
     phrase_lemma = lemmatizer.lemmatize(phrase.lower())
@@ -66,8 +50,6 @@ def find_matching_phrases(phrase, phrases, lemmatizer):
     return matches
 
 # Function to connect to the database using a connection pool
-
-
 def create_connection_pool():
     return psycopg2.pool.SimpleConnectionPool(
         minconn=1,
@@ -78,52 +60,36 @@ def create_connection_pool():
         password=DATABASE_PASSWORD
     )
 
-
 # Initialize stemmer and lemmatizer
 stemmer = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
 
-# Fetch XML data from file
-tree = ET.parse(XML_FILE_PATH)
-root = tree.getroot()
+# Load the Excel file into a workbook object
+workbook = openpyxl.load_workbook('larger_dataset.xlsx')
 
-# Sets to store unique sentences and issue codes
-sentences = set()
-issueCodes = set()
+# Select the first sheet in the workbook
+sheet = workbook.active
 
-# Dictionary to store variations of phrase words found in the sentences
-phrase_variations = {}
+# Create a folder to store the downloaded issue reports
+issue_report_folder = "issue_reports"
+if not os.path.exists(issue_report_folder):
+    os.makedirs(issue_report_folder)
 
-# Preprocess phrases and create variations
-preprocessed_phrases = [stemmer.stem(
-    lemmatizer.lemmatize(p.lower())) for p in phrases]
-for phrase in phrases:
-    matching_phrases = find_matching_phrases(phrase, phrases, lemmatizer)
-    if matching_phrases:
-        phrase_variations[phrase] = matching_phrases
-        print("Found variations for phrase:", phrase)
-        print("Variations:", matching_phrases)
-
-# Iterate over issue elements in the XML data
-for issue in root.findall('.//item'):
-    issue_num = issue.find('key').text
-    description = issue.find('description').text
-    print("Extracted issue number:", issue_num)
-
-    # Extract text content from description element, ignoring HTML and other tags
-    soup = BeautifulSoup(description, 'html.parser')
-    description_text = soup.get_text()
-
-    # Extract sentences from the description text using regex pattern
-    sentences_list = re.findall(
-        r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', description_text)
-
-    # Check if any sentence contains the desired phrases
-    if any(contains_phrase(sentence, preprocessed_phrases) for sentence in sentences_list):
-        # Store the sentences in the "sentences" set
-        sentences.update(sentences_list)
-        # Store the issue number in the "issueCodes" set
-        issueCodes.add(issue_num)
+# Function to download the XML version of an issue report
+def download_issue_report(issue_id):
+    issue_report_url = "https://issues.apache.org/jira/si/jira.issueviews:issue-xml/{issue_id}/{issue_id}.xml"
+    url = issue_report_url.format(issue_id=issue_id)
+    print(f"Downloading XML for issue {issue_id}...")
+    response = requests.get(url)
+    if response.status_code == 200:
+        file_path = os.path.join(issue_report_folder, f"{issue_id}.xml")
+        with open(file_path, "wb") as file:
+            file.write(response.content)
+        print(f"XML downloaded for issue {issue_id}")
+        return file_path
+    else:
+        print(f"Failed to download XML for issue {issue_id}")
+        return None
 
 # Connect to the database using the connection pool
 conn_pool = create_connection_pool()
@@ -135,32 +101,59 @@ try:
     # Create a cursor object
     cursor = conn.cursor()
 
-    # Check if there are any valid sentences and issue codes to insert
-    if sentences and issueCodes:
-        # Convert sets to lists for bulk insertion
-        sentence_list = list(sentences)
-        issue_code_list = list(issueCodes)
+    # Check each row in the sheet
+    for row in sheet.iter_rows(min_row=2, min_col=1, max_col=1, values_only=True):
+        issue_code = row[0]
 
-        # Insert the sentences into the "sentences" table
-        print("Inserting sentences...")
-        cursor.executemany("INSERT INTO sentences (sentence) VALUES (%s)", [
-                           (s,) for s in sentence_list])
+        # Download the XML file for the issue
+        xml_file = download_issue_report(issue_code)
 
-        # Insert the issue codes into the "issueCodes" table
-        print("Inserting issue codes...")
-        cursor.executemany("INSERT INTO issueCodes (code) VALUES (%s)", [
-                           (c,) for c in issue_code_list])
+        if xml_file:
+            # Parse the XML file
+            with open(xml_file, "r") as file:
+                xml_content = file.read()
+            soup = BeautifulSoup(xml_content, "xml")
 
-    # Commit the changes to the database
-    conn.commit()
-    print("Data insertion completed.")
+            # Extract comments from the XML
+            comments = soup.select("item > comments > comment")
+
+            # Variables to store causal and non-causal comments
+            causal_comments = []
+            non_causal_comments = []
+
+            # Iterate over the comments
+            for comment in comments:
+                comment_text = comment.text.strip()
+
+                # Remove HTML tags from the comment text
+                comment_text = re.sub("<.*?>", "", comment_text)
+
+                # Normalize the comment by stemming and lemmatizing
+                normalized_comment = ' '.join([stemmer.stem(lemmatizer.lemmatize(word.lower())) for word in comment_text.split()])
+
+                # Check if the normalized comment contains any of the phrases
+                if contains_phrase(normalized_comment, phrases):
+                    causal_comments.append(comment_text)
+                else:
+                    non_causal_comments.append(comment_text)
+
+            # Store the information in the database
+            if causal_comments:
+                # Insert the causal comments into the "causal_comments" table
+                cursor.executemany("INSERT INTO causal_comments (issue_code, comment) VALUES (%s, %s)",
+                                   [(issue_code, comment) for comment in causal_comments])
+
+            if non_causal_comments:
+                # Insert the non-causal comments into the "non_causal_comments" table
+                cursor.executemany("INSERT INTO non_causal_comments (issue_code, comment) VALUES (%s, %s)",
+                                   [(issue_code, comment) for comment in non_causal_comments])
+
+            # Commit the changes to the database
+            conn.commit()
 
 finally:
     # Release the connection back to the pool
     conn_pool.putconn(conn)
 
-# Print the variations of phrase words found in the sentences
-print("\nPhrase Variations:")
-for phrase, variations in phrase_variations.items():
-    print("Phrase:", phrase)
-    print("Variations:", variations)
+# Print completion message
+print("Issue report analysis completed.")
