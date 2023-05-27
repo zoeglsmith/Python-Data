@@ -2,14 +2,13 @@ import ssl
 import nltk
 from nltk.stem import PorterStemmer
 from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet
 import os
 import re
 import psycopg2
 import openpyxl
 import difflib
 from psycopg2 import pool
-from jira import JIRA
+import xml.etree.ElementTree as ET
 
 # Set the SSL certificate file path
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -17,7 +16,13 @@ ssl._create_default_https_context = ssl._create_unverified_context
 # Set the NLTK data directory within the 'env' folder
 nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
 
-nltk.download('wordnet')
+# Disable SSL verification for JIRA connection
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
+# Constants for XML file path
+XML_FILE_PATH = 'SearchRequest.xml'
 
 # Constants for database connection
 DATABASE_NAME = "issues"
@@ -33,8 +38,9 @@ phrases = {
     "code", "functionality"
 }
 
-
 # Function to check if a sentence contains any of the phrases
+
+
 def contains_phrase(sentence, phrases):
     for phrase in phrases:
         pattern = r"\b" + re.escape(phrase) + r"\b"
@@ -42,8 +48,9 @@ def contains_phrase(sentence, phrases):
             return True
     return False
 
-
 # Function to find matching phrases with variations (typos, plural forms, different endings)
+
+
 def find_matching_phrases(phrase, phrases, lemmatizer):
     matches = []
     phrase_lemma = lemmatizer.lemmatize(phrase.lower())
@@ -57,8 +64,9 @@ def find_matching_phrases(phrase, phrases, lemmatizer):
             matches.append(p)
     return matches
 
-
 # Function to connect to the database using a connection pool
+
+
 def create_connection_pool():
     return psycopg2.pool.SimpleConnectionPool(
         minconn=1,
@@ -74,15 +82,9 @@ def create_connection_pool():
 stemmer = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
 
-# JIRA instance URL
-jira_url = "https://issues.apache.org/jira"
-
-# Connect to JIRA
-jira = JIRA(jira_url)
-
-# Perform JQL search to get all issues
-jql = "project = CXF"
-all_issues = jira.search_issues(jql, maxResults=None)
+# Fetch XML data from file
+tree = ET.parse(XML_FILE_PATH)
+root = tree.getroot()
 
 # Sets to store unique sentences and issue codes
 sentences = set()
@@ -101,24 +103,24 @@ for phrase in phrases:
         print("Found variations for phrase:", phrase)
         print("Variations:", matching_phrases)
 
-# Check each issue for the phrases
-for issue in all_issues:
-    issue_key = issue.key
-    issue_summary = issue.fields.summary
+# Iterate over issue elements in the XML data
+for issue in root.findall('.//item'):
+    issue_num = issue.find('key').text
+    description = issue.find('description').text
+    print("Extracted issue number:", issue_num)
 
-    print("Processing Issue Key:", issue_key)
-    print("Summary:", issue_summary)
+    # Extract text content from description element, ignoring HTML and other tags
+    description_text = ''.join(issue.find('description').itertext())
 
-    # Normalize the issue summary by stemming and lemmatizing
-    normalized_summary = ' '.join(
-        [stemmer.stem(lemmatizer.lemmatize(word.lower())) for word in issue_summary.split()])
+    # Extract words from the description text using regex pattern
+    words = re.findall(r'\b\w+\b', description_text)
 
-    # Check if the normalized summary contains any of the phrases
-    if contains_phrase(normalized_summary, preprocessed_phrases):
-        # Store the summary in the "sentences" set
-        sentences.add(issue_summary)
-        # Store the issue key in the "issueCodes" set
-        issueCodes.add(issue_key)
+    # Check if any word contains the desired phrases
+    if any(contains_phrase(word, preprocessed_phrases) for word in words):
+        # Store the description in the "sentences" set
+        sentences.add(description_text)
+        # Store the issue number in the "issueCodes" set
+        issueCodes.add(issue_num)
 
 # Connect to the database using the connection pool
 conn_pool = create_connection_pool()
