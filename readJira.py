@@ -21,10 +21,9 @@ DATABASE_POOL_SIZE = 5
 
 # Constants for specific phrases
 phrases = {
-    "issue", "problem", "bug", "error", "fix", "solution", "cause", "concern",
-    "dependency", "implementation", "bug fix", "code", "functionality", "support", "validate", "detected", "crash",
-    "request", "improve", "unable", "broken", "documentation", "performance", "caused by", "validate", "logic",
-    "code", "functionality"
+    "issue", "problem", "bug", "error", "fix", "solution", "cause", "dependency",
+    "implementation", "bug fix", "crash", "request", "broken", "documentation",
+    "performance", "caused by", "it was"
 }
 
 # Function to check if a sentence contains any of the phrases
@@ -131,11 +130,18 @@ try:
                 # Normalize the comment by stemming and lemmatizing
                 normalized_comment = ' '.join([stemmer.stem(lemmatizer.lemmatize(word.lower())) for word in comment_text.split()])
 
+                # Debug print statements
+                print("Comment:", comment_text)
+                print("Normalized Comment:", normalized_comment)
+                print("Contains Phrase:", contains_phrase(normalized_comment, phrases))
+
                 # Check if the normalized comment contains any of the phrases
                 if contains_phrase(normalized_comment, phrases):
                     causal_comments.append(comment_text)
+                    print("Table: causal_comments")
                 else:
                     non_causal_comments.append(comment_text)
+                    print("Table: non_causal_comments")
 
             # Store the information in the database
             if causal_comments:
