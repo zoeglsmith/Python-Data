@@ -142,18 +142,32 @@ try:
                 else:
                     non_causal_comments.append(comment_text)
                     print("Table: non_causal_comments")
+                    
+                    # Check if the issue code exists in the issueCodes table
+            cursor.execute("SELECT code FROM issueCodes WHERE code = %s", (issue_code,))
+            existing_code = cursor.fetchone()
+
+# If the issue code doesn't exist, insert it into the issueCodes table
+            if not existing_code:
+                 cursor.execute("INSERT INTO issueCodes (code) VALUES (%s)", (issue_code,))
 
             # Store the information in the database
             if causal_comments:
                 # Insert the causal comments into the "causal_comments" table
-                cursor.executemany("INSERT INTO causal_comments (issue_code, comment) VALUES (%s, %s)",
-                                   [(issue_code, comment) for comment in causal_comments])
+               cursor.executemany("""
+                    INSERT INTO sentences (code, content, causal)
+                     VALUES (%s, %s, %s)
+                    ON CONFLICT (code) DO UPDATE SET content = excluded.content, causal = excluded.causal
+                 """, [(issue_code, comment, True) for comment in causal_comments])
+
 
             if non_causal_comments:
                 # Insert the non-causal comments into the "non_causal_comments" table
-                cursor.executemany("INSERT INTO non_causal_comments (issue_code, comment) VALUES (%s, %s)",
-                                   [(issue_code, comment) for comment in non_causal_comments])
-
+                cursor.executemany("""
+                     INSERT INTO sentences (code, content, causal)
+                     VALUES (%s, %s, %s)
+                     ON CONFLICT (code) DO UPDATE SET content = excluded.content, causal = excluded.causal
+                    """, [(issue_code, comment, False) for comment in non_causal_comments])
             # Commit the changes to the database
             conn.commit()
 
