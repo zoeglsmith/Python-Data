@@ -1,3 +1,4 @@
+from html import unescape
 import os
 import re
 import requests
@@ -96,6 +97,8 @@ conn_pool = create_connection_pool()
 # Get a connection from the pool
 conn = conn_pool.getconn()
 
+# ...
+
 try:
     # Create a cursor object
     cursor = conn.cursor()
@@ -103,14 +106,6 @@ try:
     # Check each row in the sheet
     for row in sheet.iter_rows(min_row=2, min_col=1, max_col=1, values_only=True):
         issue_code = row[0]
-        
-        # Check if the issue code exists in the issueCodes table
-        cursor.execute("SELECT code FROM issueCodes WHERE code = %s", (issue_code,))
-        existing_code = cursor.fetchone()
-
-        # If the issue code doesn't exist, insert it into the issueCodes table
-        if not existing_code:
-            cursor.execute("INSERT INTO issueCodes (code) VALUES (%s)", (issue_code,))
 
         # Download the XML file for the issue
         xml_file = download_issue_report(issue_code)
@@ -122,15 +117,22 @@ try:
             soup = BeautifulSoup(xml_content, "xml")
 
             # Extract comments from the XML
-            comments = soup.select("item > comments > comment")
-
-            # Variables to store causal and non-causal comments
-            causal_comments = []
-            non_causal_comments = []
+            comments = soup.select("comments > comment")
 
             # Iterate over the comments
             for comment in comments:
-                comment_text = comment.text.strip()
+                # Extract date and author from the comment
+                date = comment.get("created", None)
+                author = comment.get("author", None)
+
+                # Assign default values if the attributes are missing
+                if date is None:
+                    date = "Unknown Date"
+                if author is None:
+                    author = "Unknown Author"
+
+                # Extract content from the comment
+                comment_text = unescape(comment.text.strip())
 
                 # Remove HTML tags from the comment text
                 comment_text = re.sub("<.*?>", "", comment_text)
@@ -138,46 +140,25 @@ try:
                 # Normalize the comment by stemming and lemmatizing
                 normalized_comment = ' '.join([stemmer.stem(lemmatizer.lemmatize(word.lower())) for word in comment_text.split()])
 
-                # Debug print statements
-                print("Comment:", comment_text)
-                print("Normalized Comment:", normalized_comment)
-                print("Contains Phrase:", contains_phrase(normalized_comment, phrases))
-
                 # Check if the normalized comment contains any of the phrases
                 if contains_phrase(normalized_comment, phrases):
-                    causal_comments.append(comment_text)
-                    print("Table: causal_comments")
+                    causal = True
                 else:
-                    non_causal_comments.append(comment_text)
-                    print("Table: non_causal_comments")
-                    
-                    # Check if the issue code exists in the issueCodes table
-            cursor.execute("SELECT code FROM issueCodes WHERE code = %s", (issue_code,))
-            existing_code = cursor.fetchone()
+                    causal = False
 
-# If the issue code doesn't exist, insert it into the issueCodes table
-            if not existing_code:
-                 cursor.execute("INSERT INTO issueCodes (code) VALUES (%s)", (issue_code,))
+                # Insert the comment into the database
+                cursor.execute("""
+                    INSERT INTO sentences (code, date, author, content, causal)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (issue_code, date, author, normalized_comment, causal))
 
-            # Store the information in the database
-            if causal_comments:
-                # Insert the causal comments into the "causal_comments" table
-               cursor.executemany("""
-                    INSERT INTO sentences (code, content, causal)
-                     VALUES (%s, %s, %s)
-                    ON CONFLICT (code) DO UPDATE SET content = excluded.content, causal = excluded.causal
-                 """, [(issue_code, comment, True) for comment in causal_comments])
-
-
-            if non_causal_comments:
-                # Insert the non-causal comments into the "non_causal_comments" table
-                cursor.executemany("""
-                     INSERT INTO sentences (code, content, causal)
-                     VALUES (%s, %s, %s)
-                     ON CONFLICT (code) DO UPDATE SET content = excluded.content, causal = excluded.causal
-                    """, [(issue_code, comment, False) for comment in non_causal_comments])
             # Commit the changes to the database
             conn.commit()
+
+except psycopg2.errors.InFailedSqlTransaction:
+    # Handle the failed transaction error here
+    print("Transaction failed. Rolling back changes...")
+    conn.rollback()
 
 finally:
     # Release the connection back to the pool
