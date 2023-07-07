@@ -97,8 +97,6 @@ conn_pool = create_connection_pool()
 # Get a connection from the pool
 conn = conn_pool.getconn()
 
-# ...
-
 try:
     # Create a cursor object
     cursor = conn.cursor()
@@ -106,6 +104,12 @@ try:
     # Check each row in the sheet
     for row in sheet.iter_rows(min_row=2, min_col=1, max_col=1, values_only=True):
         issue_code = row[0]
+
+        # Insert the issue code into the database
+        cursor.execute("""
+            INSERT INTO issueCodes (code)
+            VALUES (%s)
+        """, (issue_code,))
 
         # Download the XML file for the issue
         xml_file = download_issue_report(issue_code)
