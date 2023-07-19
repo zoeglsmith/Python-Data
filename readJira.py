@@ -10,6 +10,8 @@ from nltk.stem import WordNetLemmatizer
 import difflib
 import psycopg2
 from psycopg2 import pool
+import logging
+
 
 # Set the SSL certificate file path
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -19,6 +21,12 @@ DATABASE_NAME = "issues"
 DATABASE_USER = "zoe"
 DATABASE_PASSWORD = "password"
 DATABASE_POOL_SIZE = 5
+
+
+# Set up logging
+logging.basicConfig(filename='issue_analysis.log', level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 # Constants for specific phrases
 phrases = {
@@ -64,11 +72,29 @@ def create_connection_pool():
 stemmer = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
 
+# Regular expression pattern to match the expected issue code format
+issue_code_pattern = r"^[A-Z]+-\d{4}$"
+
 # Load the Excel file into a workbook object
 workbook = openpyxl.load_workbook('larger_dataset.xlsx')
 
+# ... (rest of the code)
+
+
 # Select the first sheet in the workbook
 sheet = workbook.active
+
+# Initialize an empty list to store the issue codes
+issue_codes = []
+
+# Iterate over all the cells in the first column of the sheet
+for cell in sheet['A']:
+    # Check if the cell value is not empty and is a valid issue code
+    if cell.value and re.match(issue_code_pattern, cell.value):
+        issue_codes.append(cell.value)
+
+# Close the workbook
+workbook.close()
 
 # Create a folder to store the downloaded issue reports
 issue_report_folder = "issue_reports"
@@ -88,8 +114,8 @@ def download_issue_report(issue_id):
         print(f"XML downloaded for issue {issue_id}")
         return file_path
     else:
-        print(f"Failed to download XML for issue {issue_id}")
-        return None
+     logging.warning(f"Failed to download XML for issue {issue_id}")
+    return None
 
 # Connect to the database using the connection pool
 conn_pool = create_connection_pool()
@@ -97,19 +123,27 @@ conn_pool = create_connection_pool()
 # Get a connection from the pool
 conn = conn_pool.getconn()
 
+# Keep track of the number of issue codes processed and inserted
+total_issue_codes = len(issue_codes)
+processed_issue_codes = 0
+inserted_records = 0
+
 try:
     # Create a cursor object
     cursor = conn.cursor()
 
-    # Check each row in the sheet
-    for row in sheet.iter_rows(min_row=2, min_col=1, max_col=1, values_only=True):
-        issue_code = row[0]
+    # Check each issue code
+    for issue_code in issue_codes:
+        processed_issue_codes += 1
+
 
         # Insert the issue code into the database
         cursor.execute("""
             INSERT INTO issueCodes (code)
             VALUES (%s)
         """, (issue_code,))
+        inserted_records += cursor.rowcount
+
 
         # Download the XML file for the issue
         xml_file = download_issue_report(issue_code)
@@ -125,7 +159,7 @@ try:
 
             # Iterate over the comments
             for comment in comments:
-                # Extract date and author from the comment
+        # Extract date and author from the comment
                 date = comment.get("created", None)
                 author = comment.get("author", None)
 
@@ -159,14 +193,22 @@ try:
             # Commit the changes to the database
             conn.commit()
 
+
 except psycopg2.errors.InFailedSqlTransaction:
     # Handle the failed transaction error here
-    print("Transaction failed. Rolling back changes...")
+    logging.error("Transaction failed. Rolling back changes...")
     conn.rollback()
+
+except Exception as e:
+    # Handle other unexpected errors
+    logging.error(f"An unexpected error occurred: {str(e)}")
 
 finally:
     # Release the connection back to the pool
     conn_pool.putconn(conn)
 
-# Print completion message
-print("Issue report analysis completed.")
+# Print completion message and summary
+logging.info("Issue report analysis completed.")
+logging.info(f"Total issue codes: {total_issue_codes}")
+logging.info(f"Processed issue codes: {processed_issue_codes}")
+logging.info(f"Inserted records: {inserted_records}")

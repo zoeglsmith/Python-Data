@@ -2,7 +2,6 @@ import random
 import openpyxl
 import psycopg2
 from psycopg2 import pool
-import re
 
 # Constants for database connection
 DATABASE_NAME = "issues"
@@ -21,18 +20,20 @@ def create_connection_pool():
         password=DATABASE_PASSWORD
     )
 
+# Function to fetch all issue codes from the 'issuecodes' table
+def get_all_issue_codes():
+    conn = conn_pool.getconn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT code FROM issuecodes")
+    issue_codes = [code[0] for code in cursor.fetchall()]
+    conn_pool.putconn(conn)
+    return issue_codes
+
 # Connect to the database using the connection pool
 conn_pool = create_connection_pool()
 
-# Get a connection from the pool
-conn = conn_pool.getconn()
-
-# Create a cursor object
-cursor = conn.cursor()
-
-# Fetch all issue codes from the 'issucodes' table
-cursor.execute("SELECT code FROM issuecodes")
-all_issue_codes = [code[0] for code in cursor.fetchall()]
+# Get all issue codes from the database
+all_issue_codes = get_all_issue_codes()
 
 # Define the number of issue codes you want to select randomly from each prefix
 num_codes_per_prefix = 73  # 365 total codes / 5 prefixes = 73 codes per prefix
@@ -43,12 +44,14 @@ for prefix in ['CXF', 'GROOVY', 'HARMONY', 'CASSANDRA', 'INFRA']:
     issue_codes_by_prefix[prefix] = [code for code in all_issue_codes if code.startswith(prefix)]
 
 # Randomly select issue codes from each prefix
-selected_issue_codes = []
+selected_issue_codes = set()  # Use a set to ensure uniqueness
 for prefix in issue_codes_by_prefix:
-    selected_issue_codes.extend(random.sample(issue_codes_by_prefix[prefix], num_codes_per_prefix))
+    selected_issue_codes.update(random.sample(issue_codes_by_prefix[prefix], num_codes_per_prefix))
 
-# Release the connection back to the pool
-conn_pool.putconn(conn)
+# Check if we have exactly 365 unique issue codes
+if len(selected_issue_codes) != 365:
+    print("Error: Unable to select 365 unique issue codes.")
+    exit()
 
 # Create a new Excel workbook
 workbook = openpyxl.Workbook()
