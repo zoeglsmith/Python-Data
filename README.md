@@ -22,3 +22,7 @@ I classify the extracted keywords to differentiate between causal and casual fac
 ### Statistical Analysis and Confidence Level
 
 Through statistical analysis of a sample of issue reports, we aim to achieve a 95% confidence level for the accuracy of our automated system. This is to ensure my algorithm has accurately gone through the issue reports and categorised each comments into the correct casual or non-causal factor
+
+
+
+**To be updated.....**
